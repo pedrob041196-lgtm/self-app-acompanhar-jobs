@@ -1,10 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Printer, Target } from 'lucide-react';
+import { Plus, Trash2, Printer, Target, Save, Download } from 'lucide-react';
 
 export default function ResumeBuilder({ resumeData, setResumeData }) {
   const [jobDescription, setJobDescription] = useState('');
   const [previewMode, setPreviewMode] = useState(false);
+  
+  const [savedTemplates, setSavedTemplates] = useState(() => JSON.parse(localStorage.getItem('self_resume_templates')) || []);
+  const [templateName, setTemplateName] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+
+  useEffect(() => {
+    localStorage.setItem('self_resume_templates', JSON.stringify(savedTemplates));
+  }, [savedTemplates]);
+
+  const saveTemplate = () => {
+    if (!templateName.trim()) return;
+    if (savedTemplates.length >= 10) {
+      alert('You can only save up to 10 templates.');
+      return;
+    }
+    const newTemplate = {
+      id: uuidv4(),
+      name: templateName,
+      data: { ...resumeData }
+    };
+    setSavedTemplates([...savedTemplates, newTemplate]);
+    setTemplateName('');
+  };
+
+  const handleLoadTemplate = () => {
+    if (!selectedTemplateId) return;
+    const template = savedTemplates.find(t => t.id === selectedTemplateId);
+    if (template) {
+      if (window.confirm(`Load template "${template.name}"? This will overwrite your current resume data.`)) {
+        setResumeData(template.data);
+      }
+    }
+  };
+
+  const handleDeleteTemplate = () => {
+    if (!selectedTemplateId) return;
+    if (!window.confirm('Are you sure you want to delete this template?')) return;
+    setSavedTemplates(savedTemplates.filter(t => t.id !== selectedTemplateId));
+    setSelectedTemplateId('');
+  };
 
   const updateField = (field, value) => setResumeData(prev => ({ ...prev, [field]: value }));
 
@@ -131,6 +171,67 @@ export default function ResumeBuilder({ resumeData, setResumeData }) {
         <div>
           <h2 className="heading-lg">Resume Builder</h2>
           <p className="text-muted">Create a master resume and adapt it to specific job descriptions.</p>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'center' }}>
+        {/* Save Template Section */}
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flex: 1, minWidth: '300px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <h3 className="heading-md" style={{ margin: 0 }}>Save Template</h3>
+            <span className="text-muted" style={{ fontSize: '0.8rem' }}>{savedTemplates.length}/10 saved</span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
+            <input 
+              type="text" 
+              placeholder="e.g., Translation CV" 
+              value={templateName}
+              onChange={e => setTemplateName(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button className="btn btn-primary" onClick={saveTemplate} disabled={savedTemplates.length >= 10 || !templateName.trim()}>
+              Save
+            </button>
+          </div>
+        </div>
+
+        <div style={{ width: '1px', height: '40px', background: 'var(--border-color)', display: 'block' }} className="hide-on-mobile"></div>
+
+        {/* Load Template Section */}
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flex: 1, minWidth: '300px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <h3 className="heading-md" style={{ margin: 0 }}>Load Template</h3>
+            <span className="text-muted" style={{ fontSize: '0.8rem' }}>Overwrite current data</span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
+            <select 
+              value={selectedTemplateId}
+              onChange={e => setSelectedTemplateId(e.target.value)}
+              style={{ flex: 1, padding: '0.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-main)', color: 'var(--text-main)' }}
+            >
+              <option value="">Select a template...</option>
+              {savedTemplates.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            <button 
+              className="btn btn-outline" 
+              onClick={handleLoadTemplate} 
+              disabled={!selectedTemplateId}
+              title="Load selected template"
+            >
+              Load
+            </button>
+            <button 
+              className="btn btn-outline" 
+              onClick={handleDeleteTemplate} 
+              disabled={!selectedTemplateId}
+              style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.5rem' }}
+              title="Delete selected template"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
